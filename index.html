@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>穷小子打工记 · 管理后台</title>
+<style>
+  :root{--card:#1e2130;--accent:#ffb347;--text:#eee;--muted:#99a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:radial-gradient(circle at 50% 0%,#232640,#0f0f18);color:var(--text);min-height:100vh;}
+  .hidden{display:none!important;}
+  #gate{min-height:100vh;display:flex;align-items:center;justify-content:center;}
+  .gate-card{width:min(420px,92vw);background:var(--card);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.55);}
+  .gate-card h1{font-size:24px;text-align:center;margin-bottom:6px;}
+  .gate-card p{text-align:center;color:var(--muted);font-size:13px;margin-bottom:22px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;}
+  .field input,.field textarea{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#fff;font-size:15px;outline:none;}
+  .field input:focus,.field textarea:focus{border-color:var(--accent);}
+  .field textarea{min-height:90px;resize:vertical;}
+  .btn{width:100%;padding:13px;border:0;border-radius:11px;background:linear-gradient(90deg,var(--accent),#ff8c42);color:#1a1a2e;font-size:16px;font-weight:800;cursor:pointer;margin-top:6px;}
+  .btn:hover{filter:brightness(1.05);}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.2);color:#fff;font-weight:600;font-size:14px;}
+  .gate-msg{text-align:center;color:#ff7e7e;font-size:13px;margin-top:12px;min-height:18px;}
+  .hint{text-align:center;color:var(--muted);font-size:12px;margin-top:14px;}
+  #panel{max-width:860px;margin:0 auto;padding:24px 16px 60px;}
+  .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+  .head h1{font-size:22px;}
+  .card{background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px;margin-bottom:18px;}
+  .card h2{font-size:16px;margin-bottom:10px;}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:12px;line-height:1.6;}
+  .item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:8px;font-size:14px;}
+  .item .emo{font-size:20px;}
+  .item .n{flex:1;word-break:break-all;}
+  .item button{background:#e05c5c;color:#fff;border:0;border-radius:8px;padding:7px 12px;cursor:pointer;font-size:13px;}
+  .msg{font-size:13px;color:#7ee081;margin-top:8px;min-height:16px;}
+  .row{display:flex;gap:10px;}
+  .row .btn{flex:1;}
+</style>
+</head>
+<body>
+
+<!-- 密码门 -->
+<div id="gate">
+  <div class="gate-card">
+    <h1>🛠️ 管理后台</h1>
+    <p>穷小子打工记 · 服务端管理</p>
+    <div class="field"><label>一级密码</label><input id="p1" type="password" placeholder="请输入一级密码" autocomplete="off"></div>
+    <div class="field"><label>二级密码</label><input id="p2" type="password" placeholder="请输入二级密码" autocomplete="off"></div>
+    <button class="btn" onclick="doLogin()">进入后台</button>
+    <div class="gate-msg" id="gateMsg"></div>
+    <div class="hint">仅限管理员使用</div>
+  </div>
+</div>
+
+<!-- 后台面板 -->
+<div id="panel" class="hidden">
+  <div class="head">
+    <h1>🛠️ 管理后台</h1>
+    <button class="btn ghost" style="width:auto;padding:8px 16px" onclick="logoutAdmin()">退出</button>
+  </div>
+
+  <div class="card">
+    <h2>🌐 服务器连接</h2>
+    <div class="field"><label>后端地址</label><input id="setServer" placeholder="wss://..." autocomplete="off"></div>
+    <button class="btn ghost" onclick="saveServer()">保存并测试连接</button>
+    <div class="msg" id="serverMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>📢 公告管理</h2>
+    <div class="sub">发布后所有玩家登录页可见</div>
+    <div class="field"><textarea id="annInput" placeholder="输入公告内容…"></textarea></div>
+    <button class="btn" onclick="publishAnn()">📢 发布公告</button>
+    <button class="btn ghost" onclick="clearAnn()">清空公告</button>
+    <div class="msg" id="annMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>☁️ 云端存档管理</h2>
+    <div id="saveList" class="sub">加载中…</div>
+    <button class="btn ghost" onclick="loadSaves()">🔄 刷新列表</button>
+  </div>
+
+  <div class="card">
+    <h2>📋 本机注册账号</h2>
+    <div class="sub">来自这台设备的浏览器存档</div>
+    <div id="userList" class="sub">加载中…</div>
+    <button class="btn ghost" onclick="loadUserList()">🔄 刷新列表</button>
+  </div>
+
+  <div class="card">
+    <h2>✨ 召唤管理员账号</h2>
+    <div class="sub">账号：管理员 / 密码：6767（召唤后可在游戏登录）</div>
+    <button class="btn" onclick="summonAdmin()">召唤管理员账号</button>
+    <div class="msg" id="adminMsg"></div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_SERVER = 'wss://373-production-3d8c4377.up.railway.app';
+const USERS_KEY = 'pqdg_users_v2';
+const P1 = '3256', P2 = '1604';
+let creds = { p1: P1, p2: P2 };
+let serverUrl = (function(){
+  try{ return localStorage.getItem('pqdg_server') || DEFAULT_SERVER; }catch(e){ return DEFAULT_SERVER; }
+})();
+
+// SHA-256（与游戏一致）
+function sha256(str){
+  var bin = '';
+  for (var i = 0; i < str.length; i++) {
+    var c = str.charCodeAt(i);
+    if (c < 0x80) bin += String.fromCharCode(c);
+    else if (c < 0x800) bin += String.fromCharCode(0xC0 | (c >> 6), 0x80 | (c & 0x3F));
+    else if (c < 0xD800 || c >= 0xE000) bin += String.fromCharCode(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 0x3F), 0x80 | (c & 0x3F));
+    else { i++; var c2 = str.charCodeAt(i); var cp = 0x10000 + ((c & 0x3FF) << 10) + (c2 & 0x3FF); bin += String.fromCharCode(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3F), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F)); }
+  }
+  function rr(v,a){ return (v>>>a)|(v<<(32-a)); }
+  var mathPow = Math.pow, maxWord = mathPow(2,32), lenProp='length', i, j, result='';
+  var words = [], asciiBitLength = bin[lenProp]*8;
+  var hash = sha256.h = sha256.h || [];
+  var k = sha256.k = sha256.k || [];
+  var primeCounter = k[lenProp];
+  var isComposite = {};
+  for (var candidate=2; primeCounter<64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i=0;i<313;i+=candidate) isComposite[i]=candidate;
+      hash[primeCounter] = (mathPow(candidate,.5)*maxWord)|0;
+      k[primeCounter++] = (mathPow(candidate,1/3)*maxWord)|0;
+    }
+  }
+  bin += '\x80';
+  while (bin[lenProp]%64-56) bin += '\x00';
+  for (i=0;i<bin[lenProp];i++){ j=bin.charCodeAt(i); words[i>>2] |= j<<((3-i)%4)*8; }
+  words[words[lenProp]] = ((asciiBitLength/maxWord)|0);
+  words[words[lenProp]] = (asciiBitLength);
+  for (j=0;j<words[lenProp];){
+    var w = words.slice(j, j+=16), oldHash = hash;
+    hash = hash.slice(0,8);
+    for (i=0;i<64;i++){
+      var w15=w[i-15], w2=w[i-2], a=hash[0], e=hash[4];
+      var temp1 = hash[7] + (rr(e,6)^rr(e,11)^rr(e,25)) + ((e&hash[5])^((~e)&hash[6])) + k[i]
+        + (w[i] = (i<16)?w[i]:( w[i-16] + (rr(w15,7)^rr(w15,18)^(w15>>>3)) + w[i-7] + (rr(w2,17)^rr(w2,19)^(w2>>>10)) )|0);
+      var temp2 = (rr(a,2)^rr(a,13)^rr(a,22)) + ((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash = [(temp1+temp2)|0].concat(hash);
+      hash[4] = (hash[4]+temp1)|0;
+    }
+    for (i=0;i<8;i++) hash[i] = (hash[i]+oldHash[i])|0;
+  }
+  for (i=0;i<8;i++) for (j=3;j+1;j--){ var b=(hash[i]>>(j*8))&255; result += ((b<16)?0:'')+b.toString(16); }
+  return result;
+}
+function pwHash(user, pwd){ return sha256('pqdg|' + String(user) + '|' + String(pwd)); }
+function loadUsers(){ try{ return JSON.parse(localStorage.getItem(USERS_KEY))||{}; }catch(e){ return {}; } }
+function saveUsers(u){ try{ localStorage.setItem(USERS_KEY, JSON.stringify(u)); }catch(e){} }
+function newGameData(){ return { gems:100, hunger:100, hp:100, totalEarned:0, inventory:{}, pickaxe:'wood', vehicle:null, fuel:100, durability:100, faults:[], insurance:{vehicle:false,personal:false}, home:null, houseOwned:false, landClaimed:false, rentDays:0, contract:null, friends:[], deposits:{bank:0}, hasIntro:true, x:2000, y:900, zone:'spawn' }; }
+
+function apiBase(){ return serverUrl.replace(/^ws(s?):\/\//, 'http$1://'); }
+function qs(params){ return Object.keys(params).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(params[k])).join('&'); }
+function setMsg(id, txt, ok){ const e=document.getElementById(id); if(!e) return; e.textContent=txt; e.style.color = (ok===false) ? '#ff7e7e' : '#7ee081'; }
+
+function doLogin(){
+  const p1 = document.getElementById('p1').value.trim();
+  const p2 = document.getElementById('p2').value.trim();
+  if(p1 !== P1 || p2 !== P2){ setMsg('gateMsg','密码错误',false); return; }
+  creds = { p1, p2 };
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+  document.getElementById('setServer').value = serverUrl;
+  loadSaves(); loadUserList(); loadAnn(); testServer();
+}
+function logoutAdmin(){ location.reload(); }
+
+function saveServer(){
+  const v = document.getElementById('setServer').value.trim();
+  if(!v){ setMsg('serverMsg','地址不能为空',false); return; }
+  serverUrl = v;
+  try{ localStorage.setItem('pqdg_server', v); }catch(e){}
+  testServer();
+}
+function testServer(){
+  setMsg('serverMsg','正在测试…');
+  fetch(apiBase()+'/api/save?user=__ping__&pass=test', {cache:'no-store'})
+    .then(r=>r.text())
+    .then(txt=>{
+      let j=null; try{ j=JSON.parse(txt); }catch(e){}
+      if(j && typeof j.ok !== 'undefined') setMsg('serverMsg','✅ 后端连接正常（'+apiBase()+'）');
+      else setMsg('serverMsg','❌ 能连上但后端是旧版（无存档接口），请重新部署 server.js',false);
+    })
+    .catch(()=> setMsg('serverMsg','❌ 连不上服务器：'+apiBase(),false));
+}
+
+function loadAnn(){
+  fetch(apiBase()+'/api/announcement',{cache:'no-store'}).then(r=>r.json()).then(a=>{
+    if(a && a.text) document.getElementById('annInput').value = a.text;
+  }).catch(()=>{});
+}
+function publishAnn(){
+  const text = document.getElementById('annInput').value.trim();
+  if(!text){ setMsg('annMsg','公告不能为空',false); return; }
+  fetch(apiBase()+'/api/announcement',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,p1:creds.p1,p2:creds.p2})})
+    .then(r=>r.json()).then(res=>{ if(res.ok){ setMsg('annMsg','✅ 公告已发布'); } else setMsg('annMsg','❌ '+(res.error||'失败'),false); })
+    .catch(()=> setMsg('annMsg','❌ 无法连接服务器',false));
+}
+function clearAnn(){
+  fetch(apiBase()+'/api/announcement',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'',p1:creds.p1,p2:creds.p2})})
+    .then(r=>r.json()).then(res=>{ if(res.ok){ setMsg('annMsg','✅ 公告已清空'); } else setMsg('annMsg','❌ '+(res.error||'失败'),false); })
+    .catch(()=> setMsg('annMsg','❌ 无法连接服务器',false));
+}
+
+function loadSaves(){
+  const box = document.getElementById('saveList');
+  if(!box) return;
+  box.textContent = '加载中…';
+  fetch(apiBase()+'/api/saves?'+qs({p1:creds.p1,p2:creds.p2}),{cache:'no-store'})
+    .then(r=>r.json()).then(res=>{
+      if(!res.ok){ box.textContent='❌ '+(res.error||'加载失败'); return; }
+      if(!res.saves.length){ box.textContent='暂无云端存档'; return; }
+      box.innerHTML = res.saves.map(s=>'<div class="item"><span class="emo">☁️</span><span class="n">'+s.user+' · 💎'+Math.floor(s.gems)+' · '+(s.vehicle||'无车')+'</span><button onclick="delSave(\''+s.user+'\')">删除</button></div>').join('');
+    }).catch(()=>{ box.textContent='❌ 无法连接服务器'; });
+}
+function delSave(user){
+  if(!confirm('删除「'+user+'」的云端存档？')) return;
+  fetch(apiBase()+'/api/save/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user,p1:creds.p1,p2:creds.p2})})
+    .then(r=>r.json()).then(res=>{ if(res.ok) loadSaves(); else alert('删除失败：'+(res.error||'')); })
+    .catch(()=>alert('网络错误'));
+}
+
+function loadUserList(){
+  const box = document.getElementById('userList');
+  if(!box) return;
+  const users = loadUsers();
+  const names = Object.keys(users);
+  if(!names.length){ box.textContent='暂无本机账号'; return; }
+  box.innerHTML = names.map(n=>'<div class="item"><span class="emo">👤</span><span class="n">'+n+(n==='管理员'?'（管理员）':'')+'</span><button onclick="delUser(\''+n+'\')">删除</button></div>').join('');
+}
+function delUser(name){
+  if(!confirm('删除本机账号「'+name+'」？（只删这台设备的本地记录）')) return;
+  const users = loadUsers(); delete users[name]; saveUsers(users); loadUserList();
+}
+function summonAdmin(){
+  const users = loadUsers();
+  users['管理员'] = { pass: pwHash('管理员','6767'), hashVer:2, cloudKey: pwHash('管理员','6767'), security:{father:'管理员',toy:'',teacher:''}, game: newGameData(), admin:true };
+  saveUsers(users);
+  setMsg('adminMsg','✅ 管理员账号已召唤：账号 管理员 / 密码 6767');
+  loadUserList();
+}
+</script>
+</body>
+</html>
