@@ -98,12 +98,16 @@
 </div>
 
 <script>
-const DEFAULT_SERVER = 'wss://373-production-3d8c4377.up.railway.app';
+const DEFAULT_SERVER = 'wss://325-production-7fcf2e38.up.railway.app';
 const USERS_KEY = 'pqdg_users_v2';
 const P1 = '3256', P2 = '1604';
 let creds = { p1: P1, p2: P2 };
 let serverUrl = (function(){
-  try{ return localStorage.getItem('pqdg_server') || DEFAULT_SERVER; }catch(e){ return DEFAULT_SERVER; }
+  try{
+    let s = localStorage.getItem('pqdg_server');
+    if(s && s.indexOf('373-production-3d8c4377') >= 0){ s = DEFAULT_SERVER; localStorage.setItem('pqdg_server', s); }
+    return s || DEFAULT_SERVER;
+  }catch(e){ return DEFAULT_SERVER; }
 })();
 
 // SHA-256（与游戏一致）
